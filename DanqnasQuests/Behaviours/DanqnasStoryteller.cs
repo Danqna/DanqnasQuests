@@ -76,10 +76,17 @@ namespace DanqnasQuests.Behaviours
 				FilterByQuestType = FilterByDisposition;
             }
 
+
+			// TODO: @dan: 
+			// If I understand this correctly this'll remove quests from specific Genders if they are disable in the options?
+			// I'm not sure how useful this is. Why'd someone want to disable quests from a specific gender?
+
 			// Remove any quests that are disabled for testosterone dependency
-			if (!MenuConfig.Instance.DisableTestosteroneChecks)
+			/*if (!MenuConfig.Instance.DisableTestosteroneChecks)
 			{
 				List<Story> FilterByTestosterone = new List<Story>();
+
+
 				foreach (Story story in FilterByQuestType)
 				{
 					if (story.InitiatorTestosteroneDominant == "NEUTRAL")
@@ -97,10 +104,16 @@ namespace DanqnasQuests.Behaviours
 					}
 				}
 				FilterByQuestType = FilterByTestosterone;
-			}
+			}*/
 
+
+			// TODO: @dan
+			// Again I don't think this is useful.
+			// With the new dialog system we could have targets in multiple factions.
+			// So you'd have for example one dialog in your faction and the next in another.
+			
 			// Remove any quests that are disabled for faction
-			if (!MenuConfig.Instance.DisableFactionChecks)
+			/*if (!MenuConfig.Instance.DisableFactionChecks)
 			{
 				List<Story> FilterByFaction = new List<Story>();
 				foreach (Story story in FilterByQuestType)
@@ -120,7 +133,7 @@ namespace DanqnasQuests.Behaviours
 					}
 				}
 				FilterByQuestType = FilterByFaction;
-			}
+			}*/
 
 			// Remove any quests that are disabled for relation
 			if (!MenuConfig.Instance.DisableRelationChecks)
@@ -145,6 +158,7 @@ namespace DanqnasQuests.Behaviours
 				FilterByQuestType = FilterByRelation;
 			}
 
+			/*
 			// Remove any quests that are disabled for occupation			
 			List<Story> FilterByOccupation = new List<Story>();
 			foreach (Story story in FilterByQuestType)
@@ -155,7 +169,8 @@ namespace DanqnasQuests.Behaviours
 				}
 			}
 			FilterByQuestType = FilterByOccupation;
-			
+			*/
+
 			// Let's check if there were any quests
 			if (FilterByQuestType.Count < 1)
 			{
@@ -342,56 +357,15 @@ namespace DanqnasQuests.Behaviours
 			return true;
 		}
 
-		public bool RelationCheckNice()
-        {
-			if(Hero.OneToOneConversationHero.GetRelationWithPlayer() >= 0)
-            {
-				return true;
-            }
-			else
-            {
-				return false;
-            }
-        }
+		public bool RelationCheckNice() => Hero.OneToOneConversationHero.GetRelationWithPlayer() >= 0
 
-		public bool RelationCheckNasty()
-        {
-			if (Hero.OneToOneConversationHero.GetRelationWithPlayer() < 0)
-			{
-				return true;
-			}
-			else
-			{
-				return false;
-			}
-		}
+		public bool RelationCheckNasty() => Hero.OneToOneConversationHero.GetRelationWithPlayer() < 0;
 
-		public bool PlayerAllowsMessenger()
-        {
-			if (MenuConfig.Instance.DisableMessengerQuests)
-			{
-				return false;
-			}
-			return true;
-		}
+		public bool PlayerAllowsMessenger() => !MenuConfig.Instance.DisableMessengerQuests;
 
-		public bool PlayerAllowsMurder()
-		{
-			if (MenuConfig.Instance.DisableMurderQuests)
-			{
-				return false;
-			}
-			return true;
-		}
+		public bool PlayerAllowsMurder() => !MenuConfig.Instance.DisableMurderQuests;
 
-		public bool PlayerAllowsDelivery()
-		{
-			if(MenuConfig.Instance.DisableDeliveryQuests)
-            {
-				return false;
-            }
-			return true;
-		}
+		public bool PlayerAllowsDelivery() => !MenuConfig.Instance.DisableDeliveryQuests;
 
 		/// <summary>
 		/// Builds a List<> from the XML document to load stories into the game
@@ -760,14 +734,7 @@ namespace DanqnasQuests.Behaviours
 			List<Hero> alltraders = Hero.AllAliveHeroes.ToList();
 			Hero ToHaveAndToHold = null;
 
-			List<Hero> filter1 = new List<Hero>();
-			foreach (Hero hero in alltraders)
-			{
-				if (hero.Occupation == Occupation.Lord && hero.IsChild == false && hero.Noncombatant == false)
-				{
-					filter1.Add(hero);
-				}
-			}
+			List<Hero> filter1 = alltraders.Where((a) => a.Occupation == Occupation.Lord && !a.IsChild && !a.Noncombatant).ToList();
 
 			while (ToHaveAndToHold == null)
 			{
