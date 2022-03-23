@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace DanqnasQuests.Models
 {
-    class Enums
+    public class Enums
     {
         public enum Occupation
         {
@@ -58,6 +58,12 @@ namespace DanqnasQuests.Models
             Unspecified,
             SameFaction,
             OtherFaction
+        }
+
+        public enum QuestActions
+        {
+            ACCEPT,
+            ABORT
         }
     }
 }
