@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Serialization;
 using TaleWorlds.CampaignSystem;
+using TaleWorlds.CampaignSystem.Actions;
 using TaleWorlds.Core;
 using TaleWorlds.GauntletUI;
 using TaleWorlds.Localization;
@@ -212,9 +213,6 @@ namespace DanqnasQuests.Behaviours
 								return stage == diag.StoryStage && target.Hero.Contains(Hero.OneToOneConversationHero);
 							}, 
 							null, 100, null, null);
-						InformationManager.DisplayMessage(new InformationMessage("added playerline with output " + $"{story.QuestName}_{i + 1}_Dialog"));
-
-						InformationManager.DisplayMessage(new InformationMessage("adding dialog " + diag.NPCDialog));
 
 						campaignGameStarter.AddDialogLine($"{story.QuestName}_{i}_Dialog_Response",
 							$"{story.QuestName}_{i}_Dialog",
@@ -222,8 +220,6 @@ namespace DanqnasQuests.Behaviours
 							diag.NPCDialog,
 							null, null, 100, null);
 
-						InformationManager.DisplayMessage(new InformationMessage("added dialogline with input " + $"{story.QuestName}_{i}_Dialog" + " output " + $"{story.QuestName}_{i}_Dialog_Response"));
-							
 						for (int l = 0; l < diag.PlayerChoices.Count; l++)
 						{
 							PlayerChoice choice = diag.PlayerChoices[l];
@@ -256,7 +252,7 @@ namespace DanqnasQuests.Behaviours
 									if (choice.LogEntry != null)
 									{
 										// TODO: Add variables for text (eg. heroes, settlements)
-										switch (choice.LogEntry.Type)
+										switch (choice.LogEntry.LogEntryType)
 										{
 											case Enums.LogEntryType.Text:
 												quest.AddLog(new TextObject(choice.LogEntry.Text, null));
@@ -281,12 +277,31 @@ namespace DanqnasQuests.Behaviours
                                     {
 										case Enums.QuestActions.Accept:
 											questInstance.StoryStage = diag.StoryStage + 1;
-											InformationManager.DisplayMessage(new InformationMessage("You accepted the quest"));
 											quest.StartQuest();
 											break;
 										case Enums.QuestActions.Finish:
 											quest.CompleteQuestWithSuccess();
 											questInstance.QuestCompleted = true;
+
+											foreach (var reward in story.Rewards) 
+											{
+												switch (reward.RewardType)
+												{
+													case Enums.RewardType.Gold:
+														GiveGoldAction.ApplyBetweenCharacters(Hero.OneToOneConversationHero, Hero.MainHero, reward.RewardQuantity);
+														break;
+													case Enums.RewardType.Influence:
+														// TODO: UNTESTED
+														Hero.MainHero.Clan.Influence = Hero.MainHero.Clan.Influence + reward.RewardQuantity;
+														break;
+													case Enums.RewardType.Relation:
+														ChangeRelationAction.ApplyPlayerRelation(Hero.OneToOneConversationHero, reward.RewardQuantity);
+														break;
+													case Enums.RewardType.Renown:
+														Hero.MainHero.Clan.AddRenown(reward.RewardQuantity, true);
+														break;
+												}
+											}
 											break;
 										case Enums.QuestActions.Cancel:
 											quest.CompleteQuestWithCancel();

@@ -31,6 +31,14 @@ namespace DanqnasQuests.Models
             OtherFaction
         }
 
+        public enum RewardType
+        {
+            Gold,
+            Relation,
+            Influence,
+            Renown
+        }
+
         public enum QuestActions
         {
             None,

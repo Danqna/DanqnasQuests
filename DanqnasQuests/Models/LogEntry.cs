@@ -9,7 +9,7 @@ namespace DanqnasQuests.Models
 {
     public class LogEntry
     {
-        public LogEntryType Type { get; set; }
+        public LogEntryType LogEntryType { get; set; }
         public string Text { get; set; }
         public string Description { get; set; }
         public int TwoWayRange { get; set; }

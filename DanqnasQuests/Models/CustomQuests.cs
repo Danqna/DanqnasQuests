@@ -20,8 +20,6 @@ namespace DanqnasQuests.Models
         public Story Story { get; set; }
         public int StoryStage { get; set; } = 0;
 
-        public static bool DialogsSetup = false;
-
         public CustomQuests(string questId, Hero questGiver, CampaignTime duration, int rewardGold, Story story) : 
             base(questId, questGiver, duration, rewardGold)
         {

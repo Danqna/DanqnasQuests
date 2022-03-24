@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Xml.Serialization;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.SaveSystem;
+using static DanqnasQuests.Models.Enums;
 
 namespace DanqnasQuests.Models
 {
@@ -22,8 +23,7 @@ namespace DanqnasQuests.Models
 		public string QuestType { get; set; }
 		public string Item { get; set; }
 		public int ItemQty { get; set; }
-		public string RewardType { get; set; }
-		public int RewardQty { get; set; }
+		public List<Reward> Rewards { get; set; } = new List<Reward>();
 		public int TimeDays { get; set; }
 		public string LogStart { get; set; }
 		public string LogFinish { get; set; }
