@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
@@ -11,6 +12,7 @@ using System.Xml.Serialization;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.Core;
 using TaleWorlds.GauntletUI;
+using TaleWorlds.Localization;
 using TaleWorlds.SaveSystem;
 
 namespace DanqnasQuests.Behaviours
@@ -25,8 +27,8 @@ namespace DanqnasQuests.Behaviours
 
 		public void OnSessionLaunched(CampaignGameStarter campaignGameStarter)
 		{
-            #region generationtest
-            /*
+			#region generationtest
+			/*
 			var q = new Story()
 			{
 				Item = "123",
@@ -81,10 +83,10 @@ namespace DanqnasQuests.Behaviours
 					File.WriteAllText(StoryPath + @"\Storys.xml", xmlOutput);
 				}
 			}*/
-            #endregion
+			#endregion
 
-            InformationManager.DisplayMessage(new InformationMessage("Preload"));
-			foreach (string file in Directory.GetFiles(StoryPath)) 
+			InformationManager.DisplayMessage(new InformationMessage("Preload"));
+			foreach (string file in Directory.GetFiles(StoryPath))
 			{
 				FileInfo finfo = new FileInfo(file);
 				XmlSerializer ser = new XmlSerializer(typeof(List<Story>));
@@ -93,100 +95,215 @@ namespace DanqnasQuests.Behaviours
 					Stories = (List<Story>)ser.Deserialize(read);
 					for (int i = 0; i < Stories.Count; i++)
 					{
-						// ID is FILENAME_STORYID. This HAS TO BE UNIQUE.
+						// ID is FILENAME_STORYID. THIS HAS TO BE UNIQUE.
 						Stories[i].Id = $"{finfo.Name}_{i}";
 					}
 				}
 			}
+
 			foreach(Story story in Stories)
             {
-				var instance = QuestInstances?.FirstOrDefault(r => r?.Id == story.Id);
-				if (instance == null) // Check if we have the story already saved. If not add it to the save
-				{
-					QuestInstances.Add(new QuestInstance()
-					{
-						Id = story.Id,
-						StoryStage = 0
-					});
-				}
-
-
+				List<Hero> heroes = new List<Hero>();
+				Random rand = new Random();
+				int randomHeroIndex;
+				// Setup Hero
+				// Occupation is only applied when TargetType is Notable
 				foreach(Target target in story.Targets)
                 {
+					if(target.Name is null)
+                    {
+						switch(target.TargetType)
+                        {
+							case Enums.TargetType.Lord:
+								heroes = Hero.AllAliveHeroes.Where(r => r.IsNoble).ToList();
+                                break;
+							case Enums.TargetType.Notable:
+								heroes = Hero.AllAliveHeroes.Where(r => r.IsNotable).ToList();
+								if (target.Occupation != null)
+									heroes = heroes.Where(r => r.Occupation == target.Occupation).ToList();
+								break;
+							case Enums.TargetType.Ruler:
+								heroes = Hero.AllAliveHeroes.Where(r => r.IsFactionLeader).ToList();
+								break;
+							case Enums.TargetType.Bandit:
+								heroes = Hero.AllAliveHeroes.Where(r => r.Occupation == Occupation.Bandit).ToList();
+								break;
+                        }
+
+						// Filter based on Faction
+						if (target.Faction == Enums.Faction.OtherFaction)
+							heroes = heroes.Where(r => r.MapFaction != Hero.MainHero.MapFaction).ToList();
+						else if (target.Faction == Enums.Faction.SameFaction)
+							heroes = heroes.Where(r => r.MapFaction == Hero.MainHero.MapFaction).ToList();
+
+						// Filter based on Gender
+						if (target.Gender == Enums.Gender.Male)
+							heroes = heroes.Where(r => !r.IsFemale).ToList();
+						else if (target.Gender == Enums.Gender.Female)
+							heroes = heroes.Where(r => r.IsFemale).ToList();
+
+						// Filter based on Settlement
+						if(target.Settlement != null)
+							heroes = heroes.Where(r => r.CurrentSettlement == Settlement.FindFirst(r => r.Name.Contains(target.Settlement))).ToList();
+
+						randomHeroIndex = rand.Next(0, heroes.Count() - 1);
+						if (target.AllOfType)
+							target.Hero = heroes;
+						else
+							target.Hero = new List<Hero>() { heroes[randomHeroIndex] };
+					} else
+                    {
+						// Specific hero
+						target.Hero = new List<Hero>() { Hero.FindFirst(r => r.Name.Contains(target.Name)) };
+                    }
+                }
+				// End Setup Hero
+
+				foreach (Target target in story.Targets)
+                {
+
+					// Setup Quests
+					// Create a quest for each target
+					foreach(Hero hero in target.Hero)
+                    {
+						string hashString = $"{story.Id}_{hero.Name}";
+
+						var quest = new CustomQuests(hashString,
+							hero,
+							CampaignTime.DaysFromNow(10),
+							100, story);
+
+						var instance = QuestInstances?.FirstOrDefault(r => r?.Id == story.Id && r.Hero == hero);
+						if (instance == null) // Check if we have the story already saved. If not add it to the save
+						{
+							QuestInstances.Add(new QuestInstance()
+							{
+								Id = story.Id,
+								Hero = hero,
+								Quest = quest,
+								StoryStage = 0
+							});
+						} else
+                        {
+							// Quest already exists in QuestInstances
+                        }
+						target.Quests.Add(hero, quest);
+                    }
+
                     for (int i = 0; i < target.Dialogs.Count; i++)
                     {
 						Dialog diag = target.Dialogs[i];
-						if (i == 0) // entry
-                        {
-							campaignGameStarter.AddPlayerLine($"{story.QuestName}_{i}_Dialog",
-								"hero_main_options",
-								$"{story.QuestName}_{i}_Dialog",
-								diag.PlayerDialog,
+
+						campaignGameStarter.AddPlayerLine($"{story.QuestName}_{i}_Dialog",
+							"hero_main_options",
+							$"{story.QuestName}_{i}_Dialog",
+							diag.PlayerDialog,
+							() => // condition
+							{
+								// Checks if the saved QuestInstance Stage is equal to the StoryStage of the dialog
+								// and if we're currently talking with a hero matching the target(s)
+								if (Hero.OneToOneConversationHero == null)
+									return false;
+								var stage = QuestInstances?.FirstOrDefault(r => r.Id == story.Id && r.Hero == Hero.OneToOneConversationHero && !r.QuestCompleted)?.StoryStage;
+								if (stage is null)
+                                {
+									return false;
+                                }
+								return stage == diag.StoryStage && target.Hero.Contains(Hero.OneToOneConversationHero);
+							}, 
+							null, 100, null, null);
+						InformationManager.DisplayMessage(new InformationMessage("added playerline with output " + $"{story.QuestName}_{i + 1}_Dialog"));
+
+						InformationManager.DisplayMessage(new InformationMessage("adding dialog " + diag.NPCDialog));
+
+						campaignGameStarter.AddDialogLine($"{story.QuestName}_{i}_Dialog_Response",
+							$"{story.QuestName}_{i}_Dialog",
+							$"{story.QuestName}_{i}_Dialog_Response",
+							diag.NPCDialog,
+							null, null, 100, null);
+
+						InformationManager.DisplayMessage(new InformationMessage("added dialogline with input " + $"{story.QuestName}_{i}_Dialog" + " output " + $"{story.QuestName}_{i}_Dialog_Response"));
+							
+						for (int l = 0; l < diag.PlayerChoices.Count; l++)
+						{
+							PlayerChoice choice = diag.PlayerChoices[l];
+
+							campaignGameStarter.AddPlayerLine($"{story.QuestName}_{i}_Dialog_{l}_Dialog",
+								$"{story.QuestName}_{i}_Dialog_Response",
+								$"{story.QuestName}_{i}_Dialog_Response_End_{l}",
+								choice.PlayerDialog,
+								() => true, null, 100, null, null);
+
+							campaignGameStarter.AddDialogLine($"{story.QuestName}_{i}_Dialog_{l}_Dialog_Response",
+								$"{story.QuestName}_{i}_Dialog_Response_End_{l}",
+								$"{story.QuestName}_{i}_Dialog_Response_End_{l}_StartQuest",
+								choice.NPCDialog,
 								() => // condition
 								{
-									// Checks if the saved QuestInstance Stage is equal to the StoryStage of the dialog
-									var stage = QuestInstances?.FirstOrDefault(r => r.Id == story.Id).StoryStage;
-									return stage == diag.StoryStage;
+									if (Hero.OneToOneConversationHero == null)
+										return false;
+									var stage = QuestInstances?.FirstOrDefault(r => r.Id == story.Id && r.Hero == Hero.OneToOneConversationHero && !r.QuestCompleted)?.StoryStage;
+									if (stage is null)
+									{
+										return false;
+									}
+									return stage == diag.StoryStage && target.Hero.Contains(Hero.OneToOneConversationHero);
 								}, 
-								null, 100, null, null);
-							InformationManager.DisplayMessage(new InformationMessage("added playerline with output " + $"{story.QuestName}_{i + 1}_Dialog"));
-
-							InformationManager.DisplayMessage(new InformationMessage("adding dialog " + diag.NPCDialog));
-
-							campaignGameStarter.AddDialogLine($"{story.QuestName}_{i}_Dialog_Response",
-								$"{story.QuestName}_{i}_Dialog",
-								$"{story.QuestName}_{i}_Dialog_Response",
-								diag.NPCDialog,
-								null, null, 100, null);
-
-							InformationManager.DisplayMessage(new InformationMessage("added dialogline with input " + $"{story.QuestName}_{i}_Dialog" + " output " + $"{story.QuestName}_{i}_Dialog_Response"));
-							
-							for (int l = 0; l < diag.PlayerChoices.Count; l++)
-							{
-								PlayerChoice choice = diag.PlayerChoices[l];
-
-								campaignGameStarter.AddPlayerLine($"{story.QuestName}_{i}_Dialog_{l}_Dialog",
-									$"{story.QuestName}_{i}_Dialog_Response",
-									$"{story.QuestName}_{i}_Dialog_Response_End_{l}",
-									choice.PlayerDialog,
-									() => true, null, 100, null, null);
-
-								campaignGameStarter.AddDialogLine($"{story.QuestName}_{i}_Dialog_{l}_Dialog_Response",
-									$"{story.QuestName}_{i}_Dialog_Response_End_{l}",
-									"hero_main_options",
-									choice.NPCDialog,
-									() => // condition
+								() => // consequence
+								{
+									var quest = target.Quests.FirstOrDefault(r => r.Key == Hero.OneToOneConversationHero).Value;
+									var questInstance = QuestInstances.FirstOrDefault(r => r.Id == story.Id && r.Hero == Hero.OneToOneConversationHero);
+									if (choice.LogEntry != null)
 									{
-										return true;
-									}, 
-									() => // consequence
-									{
-										if(choice.Action == Enums.QuestActions.ACCEPT)
-                                        {
-											AddLog()
-											QuestInstances.FirstOrDefault(r => r.Id == story.Id).StoryStage = diag.StoryStage + 1;
-											InformationManager.DisplayMessage(new InformationMessage("You accepted the quest"));
-										} else
-                                        {
-											InformationManager.DisplayMessage(new InformationMessage("You aborted the quest"));
+										// TODO: Add variables for text (eg. heroes, settlements)
+										switch (choice.LogEntry.Type)
+										{
+											case Enums.LogEntryType.Text:
+												quest.AddLog(new TextObject(choice.LogEntry.Text, null));
+												break;
+											case Enums.LogEntryType.ProgressBar:
+												quest.AddDiscreteLog(new TextObject(choice.LogEntry.Text, null),
+													new TextObject(choice.LogEntry.Description, null),
+													choice.LogEntry.Progress,
+													choice.LogEntry.ProgressMax);
+												break;
+											case Enums.LogEntryType.TwoWay:
+												quest.AddTwoWayContinuousLog(new TextObject(choice.LogEntry.Text, null),
+													new TextObject(choice.LogEntry.Description, null),
+													choice.LogEntry.Progress,
+													choice.LogEntry.TwoWayRange);
+												break;
 										}
-									} // Action
-									, 100, null);
-							}
+									}
+
+									// Handle quest Action
+									switch (choice.Action)
+                                    {
+										case Enums.QuestActions.Accept:
+											questInstance.StoryStage = diag.StoryStage + 1;
+											InformationManager.DisplayMessage(new InformationMessage("You accepted the quest"));
+											quest.StartQuest();
+											break;
+										case Enums.QuestActions.Finish:
+											quest.CompleteQuestWithSuccess();
+											questInstance.QuestCompleted = true;
+											break;
+										case Enums.QuestActions.Cancel:
+											quest.CompleteQuestWithCancel();
+											questInstance.QuestCompleted = true;
+											break;
+										case Enums.QuestActions.Betrayal:
+											quest.CompleteQuestWithBetrayal();
+											questInstance.QuestCompleted = true;
+											break;
+                                    }
+									
+								}
+								, 100, null);
 						}
 					}
                 }
 			}
-
-			// Check if we have a valid XML file and warn if we don't
-			/*if (ImportStoryXML())
-			{
-				//AddDialogs(campaignGameStarter);
-			}
-			else
-			{*/
-			//InformationManager.DisplayMessage(new InformationMessage("Unable to validate the XML file"));
-			//}
 		}
 
 		public override void RegisterEvents()

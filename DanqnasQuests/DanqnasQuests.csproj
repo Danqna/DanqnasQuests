@@ -211,8 +211,11 @@
     <Compile Include="Behaviours\DanqnasStoryteller.cs" />
     <Compile Include="DanqnasQuestsSaveableTypeDefiner.cs" />
     <Compile Include="Models\CurrentStory.cs" />
+    <Compile Include="Models\CustomIssue.cs" />
+    <Compile Include="Models\CustomQuests.cs" />
     <Compile Include="Models\Dialog.cs" />
     <Compile Include="Models\Enums.cs" />
+    <Compile Include="Models\LogEntry.cs" />
     <Compile Include="Models\PlayerChoice.cs" />
     <Compile Include="Models\QuestInstance.cs" />
     <Compile Include="Models\Story.cs" />

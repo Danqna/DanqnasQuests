@@ -13,6 +13,6 @@ namespace DanqnasQuests.Models
         public string PlayerDialog { get; set; }
         public string NPCDialog { get; set; }
         public QuestActions Action { get; set; }
-
+        public LogEntry LogEntry { get; set; }
     }
 }

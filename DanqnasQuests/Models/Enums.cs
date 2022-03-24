@@ -8,42 +8,13 @@ namespace DanqnasQuests.Models
 {
     public class Enums
     {
-        public enum Occupation
+        public enum TargetType
         {
             Unspecified,
-            ArenaMaster,
-            Armorer,
-            Artisan,
-            Bandit,
-            BannerBearer,
-            Blacksmith,
-            CaravanGuard,
-            GangLeader,
-            Gangster,
-            GoodsTrader,
-            Guard,
-            Headman,
-            HorseTrader,
+            Notable,
             Lord,
-            Mercenary,
-            Merchant,
-            Musician,
-            NotAssigned,
-            NumberOfOccupations,
-            Preacher,
-            PrisonGuard,
-            RansomBroker,
-            RuralNotable,
-            ShopWorker,
-            Soldier,
-            Special,
-            TavernGameHost,
-            Tavernkeeper,
-            TavernWench,
-            Townsfolk,
-            Villager,
-            Wanderer,
-            Weaponsmith
+            Ruler,
+            Bandit
         }
 
         public enum Gender
@@ -62,8 +33,18 @@ namespace DanqnasQuests.Models
 
         public enum QuestActions
         {
-            ACCEPT,
-            ABORT
+            None,
+            Accept,
+            Cancel,
+            Finish,
+            Betrayal
+        }
+
+        public enum LogEntryType
+        {
+            ProgressBar,
+            Text,
+            TwoWay
         }
     }
 }

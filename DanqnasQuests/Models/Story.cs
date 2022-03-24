@@ -3,12 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Serialization;
+using TaleWorlds.CampaignSystem;
 using TaleWorlds.SaveSystem;
 
 namespace DanqnasQuests.Models
 {
 	public class Story
 	{
+		[XmlIgnore]
 		public string Id { get; set; }
 		public string QuestName { get; set; }
 		public string QuestNameID { get; set; }
