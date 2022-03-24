@@ -36,7 +36,8 @@ namespace DanqnasQuests.Models
             Gold,
             Relation,
             Influence,
-            Renown
+            Renown,
+            Item
         }
 
         public enum QuestActions

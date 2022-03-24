@@ -15,7 +15,7 @@ namespace DanqnasQuests.Models
         /// <summary>
         /// Indicates if the quest has been completed (either successful or not)
         /// </summary>
-        [SaveableProperty(3)] public bool QuestCompleted { get; set; }
+        [SaveableProperty(3)] public bool QuestCompleted { get; set; } = false;
         [SaveableProperty(4)] public Hero Hero { get; set; }
         public QuestBase Quest { get; set; }
     }

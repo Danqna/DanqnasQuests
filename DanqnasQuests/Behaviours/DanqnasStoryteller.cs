@@ -300,6 +300,10 @@ namespace DanqnasQuests.Behaviours
 													case Enums.RewardType.Renown:
 														Hero.MainHero.Clan.AddRenown(reward.RewardQuantity, true);
 														break;
+													case Enums.RewardType.Item:
+														var item = Items.All.FirstOrDefault(r => r.StringId == reward.ItemName);
+														Hero.MainHero.PartyBelongedTo.ItemRoster.AddToCounts(item, reward.RewardQuantity);
+														break;
 												}
 											}
 											break;

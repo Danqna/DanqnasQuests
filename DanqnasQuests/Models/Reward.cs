@@ -11,5 +11,6 @@ namespace DanqnasQuests.Models
     {
         public RewardType RewardType { get; set; }
         public int RewardQuantity { get; set; }
+        public string ItemName { get; set; }
     }
 }
